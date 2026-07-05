@@ -5,7 +5,7 @@
   <form method="post" action="/posts" data-composer>
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
     <label class="sr-only" for="body">Post</label>
-    <textarea id="body" name="body" maxlength="{{.MaxBodyLength}}" rows="4" placeholder="What's happening?" data-body></textarea>
+    <textarea id="body" name="body" maxlength="{{.MaxBodyLength}}" rows="4" placeholder="Write" data-body></textarea>
     <div class="composer-actions">
       <span class="counter" data-counter>{{.MaxBodyLength}}</span>
       <button class="button button-primary" type="submit">Post</button>

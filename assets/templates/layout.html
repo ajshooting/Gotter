@@ -1,0 +1,32 @@
+{{define "layout"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{block "title" .}}Gotter{{end}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Gotter</a>
+    {{if .CurrentUser}}
+      <div class="account">
+        {{if .CurrentUser.AvatarURL}}
+          <img class="avatar avatar-small" src="{{.CurrentUser.AvatarURL}}" alt="">
+        {{end}}
+        <span class="account-name">{{.CurrentUser.DisplayName}}</span>
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button class="button button-ghost" type="submit">Log out</button>
+        </form>
+      </div>
+    {{end}}
+  </header>
+  <main class="shell">
+    {{template "content" .}}
+  </main>
+</body>
+</html>
+{{end}}

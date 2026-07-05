@@ -1,0 +1,50 @@
+{{define "title"}}Timeline - Gotter{{end}}
+
+{{define "content"}}
+<section class="composer">
+  <form method="post" action="/posts" data-composer>
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <label class="sr-only" for="body">Post</label>
+    <textarea id="body" name="body" maxlength="{{.MaxBodyLength}}" rows="4" placeholder="What's happening?" data-body></textarea>
+    <div class="composer-actions">
+      <span class="counter" data-counter>{{.MaxBodyLength}}</span>
+      <button class="button button-primary" type="submit">Post</button>
+    </div>
+  </form>
+  {{if .FlashError}}
+    <p class="notice">{{.FlashError}}</p>
+  {{end}}
+</section>
+
+<section class="timeline" aria-label="Timeline">
+  {{if .Posts}}
+    {{range .Posts}}
+      <article class="post">
+        <header class="post-header">
+          <div class="author">
+            {{if .AuthorAvatar}}
+              <img class="avatar" src="{{.AuthorAvatar}}" alt="">
+            {{else}}
+              <span class="avatar avatar-fallback" aria-hidden="true"></span>
+            {{end}}
+            <div class="author-text">
+              <strong>{{.AuthorName}}</strong>
+              {{if .AuthorScreen}}<span>@{{.AuthorScreen}}</span>{{end}}
+            </div>
+          </div>
+          <time>{{.CreatedAt}}</time>
+        </header>
+        <p class="post-body">{{.Body}}</p>
+        {{if eq $.CurrentUser.ID .UserID}}
+          <form method="post" action="/posts/{{.ID}}/delete" data-delete-form>
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button class="text-button" type="submit">Delete</button>
+          </form>
+        {{end}}
+      </article>
+    {{end}}
+  {{else}}
+    <p class="empty">No posts yet.</p>
+  {{end}}
+</section>
+{{end}}

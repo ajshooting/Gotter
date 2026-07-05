@@ -1,0 +1,9 @@
+{{define "title"}}{{.ErrorTitle}} - Gotter{{end}}
+
+{{define "content"}}
+<section class="message-panel">
+  <h1>{{.ErrorTitle}}</h1>
+  <p>{{.ErrorMessage}}</p>
+  <a class="button button-primary" href="/login">Back to login</a>
+</section>
+{{end}}

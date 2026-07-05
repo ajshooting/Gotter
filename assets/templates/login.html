@@ -1,0 +1,15 @@
+{{define "title"}}Sign in - Gotter{{end}}
+
+{{define "content"}}
+<section class="login-panel">
+  <div>
+    <p class="eyebrow">{{.AllowedTeam}}</p>
+    <h1>Gotter</h1>
+    <p class="lead">A private timeline for your esa team.</p>
+  </div>
+  {{if .FlashError}}
+    <p class="notice">{{.FlashError}}</p>
+  {{end}}
+  <a class="button button-primary button-wide" href="/auth/esa/start">Sign in with esa</a>
+</section>
+{{end}}

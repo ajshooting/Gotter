@@ -1,0 +1,12 @@
+.env
+
+/docs/
+
+/data/
+/backups/
+
+/gotter
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*

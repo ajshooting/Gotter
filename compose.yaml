@@ -1,0 +1,10 @@
+services:
+  gotter:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

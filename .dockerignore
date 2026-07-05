@@ -1,0 +1,10 @@
+.git
+.env
+data
+backups
+docs
+gotter
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*

@@ -2,9 +2,13 @@ services:
   gotter:
     build: .
     env_file:
-      - .env
+      - path: .env
+        required: false
     ports:
       - "${HOST_PORT:-8080}:${PORT:-8080}"
     volumes:
-      - ./data:/app/data
+      - gotter-data:/app/data
     restart: unless-stopped
+
+volumes:
+  gotter-data:

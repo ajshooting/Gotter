@@ -5,14 +5,20 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
-const MaxBodyLength = 200
+const (
+	MaxBodyLength         = 200
+	sqliteTimestampLayout = "2006-01-02 15:04:05"
+	jstTimestampLayout    = "2006-01-02 15:04 MST"
+)
 
 var (
 	ErrEmptyBody   = errors.New("post body is empty")
 	ErrBodyTooLong = errors.New("post body is too long")
+	jst            = time.FixedZone("JST", 9*60*60)
 )
 
 type Repository struct {
@@ -106,16 +112,18 @@ LIMIT ?
 	posts := make([]Post, 0)
 	for rows.Next() {
 		var p Post
+		var createdAt string
 		if err := rows.Scan(
 			&p.ID,
 			&p.UserID,
 			&p.Body,
-			&p.CreatedAt,
+			&createdAt,
 			&p.AuthorScreen,
 			&p.AuthorAvatar,
 		); err != nil {
 			return Page{}, err
 		}
+		p.CreatedAt = formatCreatedAtJST(createdAt)
 		posts = append(posts, p)
 	}
 	if err := rows.Err(); err != nil {
@@ -129,4 +137,12 @@ LIMIT ?
 		page.NextBeforeID = page.Posts[len(page.Posts)-1].ID
 	}
 	return page, nil
+}
+
+func formatCreatedAtJST(value string) string {
+	t, err := time.Parse(sqliteTimestampLayout, value)
+	if err != nil {
+		return value
+	}
+	return t.In(jst).Format(jstTimestampLayout)
 }

@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	AppName         string
 	AppBaseURL      string
 	Port            string
 	DatabasePath    string
@@ -26,6 +27,7 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
+		AppName:         getenv("APP_NAME", "Gotter"),
 		AppBaseURL:      strings.TrimRight(getenv("APP_BASE_URL", "http://localhost:8080"), "/"),
 		Port:            getenv("PORT", "8080"),
 		DatabasePath:    getenv("DATABASE_PATH", "./data/gotter.db"),
@@ -47,6 +49,9 @@ func Load() (Config, error) {
 }
 
 func (c Config) Validate() error {
+	if c.AppName == "" {
+		return errors.New("APP_NAME is required")
+	}
 	if c.AppBaseURL == "" {
 		return errors.New("APP_BASE_URL is required")
 	}

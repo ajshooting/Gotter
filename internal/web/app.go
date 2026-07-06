@@ -41,6 +41,7 @@ type App struct {
 }
 
 type viewData struct {
+	AppName       string
 	CurrentUser   *auth.User
 	AllowedTeam   string
 	CSRFToken     string
@@ -296,6 +297,8 @@ func (a *App) validCSRF(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func (a *App) render(w http.ResponseWriter, r *http.Request, status int, page string, data viewData) {
+	data.AppName = a.cfg.AppName
+
 	tmpl, err := template.ParseFS(a.templates, "layout.html", page)
 	if err != nil {
 		a.serverError(w, r, err)

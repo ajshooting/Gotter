@@ -1,10 +1,10 @@
-{{define "title"}}Sign in - Gotter{{end}}
+{{define "title"}}Sign in - {{.AppName}}{{end}}
 
 {{define "content"}}
 <section class="login-panel">
   <div>
     <p class="eyebrow">{{.AllowedTeam}}</p>
-    <h1>Gotter</h1>
+    <h1>{{.AppName}}</h1>
     <p class="lead">Private team timeline.</p>
   </div>
   {{if .FlashError}}

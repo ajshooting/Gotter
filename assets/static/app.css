@@ -225,7 +225,7 @@ a {
 .author-text {
   display: grid;
   min-width: 0;
-  margin: auto;
+  margin: auto 0;
 }
 
 .author-text span {

@@ -24,7 +24,6 @@ type Post struct {
 	UserID       int64
 	Body         string
 	CreatedAt    string
-	AuthorName   string
 	AuthorScreen string
 	AuthorAvatar string
 }
@@ -74,7 +73,6 @@ SELECT
   p.user_id,
   p.body,
   p.created_at,
-  u.display_name,
   COALESCE(ai.screen_name, ''),
   u.avatar_url
 FROM posts p
@@ -97,7 +95,6 @@ LIMIT ?
 			&p.UserID,
 			&p.Body,
 			&p.CreatedAt,
-			&p.AuthorName,
 			&p.AuthorScreen,
 			&p.AuthorAvatar,
 		); err != nil {

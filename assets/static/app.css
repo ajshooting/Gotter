@@ -227,7 +227,6 @@ a {
   min-width: 0;
 }
 
-.author-text strong,
 .author-text span {
   overflow: hidden;
   text-overflow: ellipsis;

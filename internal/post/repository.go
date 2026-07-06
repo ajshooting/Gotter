@@ -28,6 +28,12 @@ type Post struct {
 	AuthorAvatar string
 }
 
+type Page struct {
+	Posts        []Post
+	HasNext      bool
+	NextBeforeID int64
+}
+
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
@@ -62,12 +68,12 @@ WHERE id = ? AND user_id = ? AND deleted_at IS NULL
 	return err
 }
 
-func (r *Repository) List(ctx context.Context, limit int) ([]Post, error) {
+func (r *Repository) List(ctx context.Context, limit int, beforeID int64) (Page, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
-	rows, err := r.db.QueryContext(ctx, `
+	query := `
 SELECT
   p.id,
   p.user_id,
@@ -79,11 +85,21 @@ FROM posts p
 JOIN users u ON u.id = p.user_id
 LEFT JOIN auth_identities ai ON ai.user_id = u.id AND ai.provider = 'esa'
 WHERE p.deleted_at IS NULL
-ORDER BY p.created_at DESC, p.id DESC
+`
+	args := []any{}
+	if beforeID > 0 {
+		query += "AND p.id < ?\n"
+		args = append(args, beforeID)
+	}
+	query += `
+ORDER BY p.id DESC
 LIMIT ?
-`, limit)
+`
+	args = append(args, limit+1)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return Page{}, err
 	}
 	defer rows.Close()
 
@@ -98,9 +114,19 @@ LIMIT ?
 			&p.AuthorScreen,
 			&p.AuthorAvatar,
 		); err != nil {
-			return nil, err
+			return Page{}, err
 		}
 		posts = append(posts, p)
 	}
-	return posts, rows.Err()
+	if err := rows.Err(); err != nil {
+		return Page{}, err
+	}
+
+	page := Page{Posts: posts}
+	if len(posts) > limit {
+		page.Posts = posts[:limit]
+		page.HasNext = true
+		page.NextBeforeID = page.Posts[len(page.Posts)-1].ID
+	}
+	return page, nil
 }

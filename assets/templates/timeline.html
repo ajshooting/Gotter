@@ -42,8 +42,18 @@
         {{end}}
       </article>
     {{end}}
-  {{else}}
-    <p class="empty">No posts yet.</p>
-  {{end}}
+	  {{else}}
+	    <p class="empty">No posts yet.</p>
+	  {{end}}
+	  {{if or .HasLatestLink .HasNextPosts}}
+	    <nav class="pagination" aria-label="Timeline pages">
+	      {{if .HasLatestLink}}
+	        <a class="button button-ghost" href="/">Latest</a>
+	      {{end}}
+	      {{if .HasNextPosts}}
+	        <a class="button button-ghost" href="/?before={{.NextBeforeID}}">Next</a>
+	      {{end}}
+	    </nav>
+	  {{end}}
 </section>
 {{end}}

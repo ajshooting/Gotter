@@ -50,6 +50,9 @@ type viewData struct {
 	ErrorMessage  string
 	MaxBodyLength int
 	Posts         []post.Post
+	HasNextPosts  bool
+	NextBeforeID  int64
+	HasLatestLink bool
 }
 
 type currentUserContextKey struct{}
@@ -172,7 +175,13 @@ func (a *App) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := a.posts.List(r.Context(), 50)
+	beforeID, err := parseBeforeID(r)
+	if err != nil {
+		a.renderError(w, r, http.StatusBadRequest, "Invalid page", "The requested timeline page could not be found.")
+		return
+	}
+
+	page, err := a.posts.List(r.Context(), 50, beforeID)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -184,7 +193,10 @@ func (a *App) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		CSRFToken:     csrfToken,
 		FlashError:    a.sessions.PopString(r.Context(), flashErrorKey),
 		MaxBodyLength: post.MaxBodyLength,
-		Posts:         posts,
+		Posts:         page.Posts,
+		HasNextPosts:  page.HasNext,
+		NextBeforeID:  page.NextBeforeID,
+		HasLatestLink: beforeID > 0,
 	})
 }
 
@@ -265,6 +277,18 @@ func (a *App) requireAuth(next http.Handler) http.Handler {
 func currentUser(r *http.Request) *auth.User {
 	user, _ := r.Context().Value(currentUserContextKey{}).(*auth.User)
 	return user
+}
+
+func parseBeforeID(r *http.Request) (int64, error) {
+	raw := r.URL.Query().Get("before")
+	if raw == "" {
+		return 0, nil
+	}
+	beforeID, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || beforeID <= 0 {
+		return 0, errors.New("before must be a positive integer")
+	}
+	return beforeID, nil
 }
 
 func (a *App) csrfToken(ctx context.Context) (string, error) {

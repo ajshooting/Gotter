@@ -265,6 +265,13 @@ a {
   text-align: center;
 }
 
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 0 0;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

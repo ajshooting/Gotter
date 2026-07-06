@@ -109,6 +109,39 @@ func TestRepositoryDeleteOwnSoftDeletes(t *testing.T) {
 	}
 }
 
+func TestRepositoryListExcludesDeletedPostsFromAnyUser(t *testing.T) {
+	t.Parallel()
+
+	ctx, repo, db, userID := newTestRepository(t)
+	otherUserID := insertTestUser(t, ctx, db, "Other", "other", "esa-2")
+
+	visibleOwnID := insertTestPost(t, ctx, db, userID, "visible own")
+	deletedOwnID := insertTestPost(t, ctx, db, userID, "deleted own")
+	visibleOtherID := insertTestPost(t, ctx, db, otherUserID, "visible other")
+	deletedOtherID := insertTestPost(t, ctx, db, otherUserID, "deleted other")
+
+	if err := repo.DeleteOwn(ctx, userID, deletedOwnID); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.DeleteOwn(ctx, otherUserID, deletedOtherID); err != nil {
+		t.Fatal(err)
+	}
+
+	page, err := repo.List(ctx, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertPage(t, page, []string{"visible other", "visible own"}, false)
+
+	gotIDs := []int64{page.Posts[0].ID, page.Posts[1].ID}
+	wantIDs := []int64{visibleOtherID, visibleOwnID}
+	for i := range wantIDs {
+		if gotIDs[i] != wantIDs[i] {
+			t.Fatalf("post id at %d = %d, want %d", i, gotIDs[i], wantIDs[i])
+		}
+	}
+}
+
 func TestFormatCreatedAtJST(t *testing.T) {
 	t.Parallel()
 
@@ -135,7 +168,15 @@ func newTestRepository(t *testing.T) (context.Context, *Repository, *sql.DB, int
 		t.Fatal(err)
 	}
 
-	result, err := db.ExecContext(ctx, "INSERT INTO users (display_name, avatar_url) VALUES (?, ?)", "Tester", "")
+	userID := insertTestUser(t, ctx, db, "Tester", "tester", "esa-1")
+
+	return ctx, NewRepository(db), db, userID
+}
+
+func insertTestUser(t *testing.T, ctx context.Context, db *sql.DB, displayName, screenName, providerUserID string) int64 {
+	t.Helper()
+
+	result, err := db.ExecContext(ctx, "INSERT INTO users (display_name, avatar_url) VALUES (?, ?)", displayName, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,12 +193,26 @@ INSERT INTO auth_identities (
   email,
   display_name,
   avatar_url
-) VALUES (?, 'esa', 'esa-1', 'tester', '', 'Tester', '')
-`, userID); err != nil {
+) VALUES (?, 'esa', ?, ?, '', ?, '')
+`, userID, providerUserID, screenName, displayName); err != nil {
 		t.Fatal(err)
 	}
 
-	return ctx, NewRepository(db), db, userID
+	return userID
+}
+
+func insertTestPost(t *testing.T, ctx context.Context, db *sql.DB, userID int64, body string) int64 {
+	t.Helper()
+
+	result, err := db.ExecContext(ctx, "INSERT INTO posts (user_id, body) VALUES (?, ?)", userID, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	postID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return postID
 }
 
 func assertPage(t *testing.T, page Page, wantBodies []string, wantNext bool) {

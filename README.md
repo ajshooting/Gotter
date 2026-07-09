@@ -11,6 +11,7 @@ It keeps the first version intentionally simple: esa OAuth login, text-only post
 - Text posts up to 200 characters
 - Timeline view
 - User profile pages
+- Like posts
 - Delete your own posts
 
 ## Stack

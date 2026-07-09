@@ -53,6 +53,7 @@ type viewData struct {
 	ProfileUser     *auth.User
 	CurrentUserPath string
 	PagePath        string
+	ReturnTo        string
 	EmptyMessage    string
 	Posts           []post.Post
 	HasNextPosts    bool
@@ -100,6 +101,7 @@ func (a *App) Routes() http.Handler {
 		r.Get("/", a.handleTimeline)
 		r.Get("/users/{screen}", a.handleUser)
 		r.Post("/posts", a.handleCreatePost)
+		r.Post("/posts/{id}/like", a.handleToggleLike)
 		r.Post("/posts/{id}/delete", a.handleDeletePost)
 		r.Post("/logout", a.handleLogout)
 	})
@@ -187,7 +189,7 @@ func (a *App) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := a.posts.List(r.Context(), 50, beforeID)
+	page, err := a.posts.List(r.Context(), currentUser(r).ID, 50, beforeID)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -200,6 +202,7 @@ func (a *App) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		FlashError:    a.sessions.PopString(r.Context(), flashErrorKey),
 		MaxBodyLength: post.MaxBodyLength,
 		PagePath:      "/",
+		ReturnTo:      currentPath(r),
 		EmptyMessage:  "No posts yet.",
 		Posts:         page.Posts,
 		HasNextPosts:  page.HasNext,
@@ -232,7 +235,7 @@ func (a *App) handleUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := a.posts.ListByUser(r.Context(), profileUser.ID, 50, beforeID)
+	page, err := a.posts.ListByUser(r.Context(), profileUser.ID, currentUser(r).ID, 50, beforeID)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -244,6 +247,7 @@ func (a *App) handleUser(w http.ResponseWriter, r *http.Request) {
 		CSRFToken:     csrfToken,
 		ProfileUser:   &profileUser,
 		PagePath:      userPath(profileUser.ScreenName),
+		ReturnTo:      currentPath(r),
 		EmptyMessage:  "No posts yet.",
 		Posts:         page.Posts,
 		HasNextPosts:  page.HasNext,
@@ -269,6 +273,29 @@ func (a *App) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *App) handleToggleLike(w http.ResponseWriter, r *http.Request) {
+	if !a.validCSRF(w, r) {
+		return
+	}
+
+	postID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		a.renderError(w, r, http.StatusBadRequest, "Invalid post", "The requested post could not be found.")
+		return
+	}
+
+	if err := a.posts.ToggleLike(r.Context(), currentUser(r).ID, postID); err != nil {
+		if errors.Is(err, post.ErrPostNotFound) {
+			a.renderError(w, r, http.StatusNotFound, "Post not found", "The requested post could not be found.")
+			return
+		}
+		a.serverError(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, safeReturnPath(r.PostForm.Get("return_to")), http.StatusSeeOther)
 }
 
 func (a *App) handleDeletePost(w http.ResponseWriter, r *http.Request) {
@@ -397,6 +424,21 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, status int, page st
 
 func userPath(screenName string) string {
 	return "/users/" + url.PathEscape(screenName)
+}
+
+func currentPath(r *http.Request) string {
+	path := r.URL.RequestURI()
+	if path == "" {
+		return "/"
+	}
+	return path
+}
+
+func safeReturnPath(path string) string {
+	if path == "" || path[0] != '/' || (len(path) > 1 && path[1] == '/') {
+		return "/"
+	}
+	return path
 }
 
 func (a *App) renderError(w http.ResponseWriter, r *http.Request, status int, title, message string) {

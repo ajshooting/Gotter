@@ -52,19 +52,19 @@ func TestRepositoryListPaginatesByCursor(t *testing.T) {
 		}
 	}
 
-	first, err := repo.List(ctx, 2, 0)
+	first, err := repo.List(ctx, userID, 2, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertPage(t, first, []string{"post 5", "post 4"}, true)
 
-	second, err := repo.List(ctx, 2, first.NextBeforeID)
+	second, err := repo.List(ctx, userID, 2, first.NextBeforeID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertPage(t, second, []string{"post 3", "post 2"}, true)
 
-	third, err := repo.List(ctx, 2, second.NextBeforeID)
+	third, err := repo.List(ctx, userID, 2, second.NextBeforeID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestRepositoryDeleteOwnSoftDeletes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	page, err := repo.List(ctx, 10, 0)
+	page, err := repo.List(ctx, userID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestRepositoryDeleteOwnSoftDeletes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	page, err = repo.List(ctx, 10, 0)
+	page, err = repo.List(ctx, userID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestRepositoryListExcludesDeletedPostsFromAnyUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	page, err := repo.List(ctx, 10, 0)
+	page, err := repo.List(ctx, userID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,11 +152,76 @@ func TestRepositoryListByUserOnlyReturnsThatUsersPosts(t *testing.T) {
 	insertTestPost(t, ctx, db, otherUserID, "other")
 	insertTestPost(t, ctx, db, userID, "own second")
 
-	page, err := repo.ListByUser(ctx, userID, 10, 0)
+	page, err := repo.ListByUser(ctx, userID, userID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertPage(t, page, []string{"own second", "own first"}, false)
+}
+
+func TestRepositoryToggleLikeAddsAndRemovesLike(t *testing.T) {
+	t.Parallel()
+
+	ctx, repo, db, userID := newTestRepository(t)
+	otherUserID := insertTestUser(t, ctx, db, "Other", "other", "esa-2")
+	postID := insertTestPost(t, ctx, db, userID, "liked post")
+
+	if err := repo.ToggleLike(ctx, userID, postID); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.ToggleLike(ctx, otherUserID, postID); err != nil {
+		t.Fatal(err)
+	}
+
+	page, err := repo.List(ctx, userID, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := page.Posts[0].LikeCount; got != 2 {
+		t.Fatalf("LikeCount = %d, want 2", got)
+	}
+	if !page.Posts[0].LikedByViewer {
+		t.Fatal("LikedByViewer = false, want true")
+	}
+
+	page, err = repo.List(ctx, otherUserID, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !page.Posts[0].LikedByViewer {
+		t.Fatal("LikedByViewer for other user = false, want true")
+	}
+
+	if err := repo.ToggleLike(ctx, userID, postID); err != nil {
+		t.Fatal(err)
+	}
+	page, err = repo.List(ctx, userID, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := page.Posts[0].LikeCount; got != 1 {
+		t.Fatalf("LikeCount after unlike = %d, want 1", got)
+	}
+	if page.Posts[0].LikedByViewer {
+		t.Fatal("LikedByViewer after unlike = true, want false")
+	}
+}
+
+func TestRepositoryToggleLikeRejectsMissingOrDeletedPost(t *testing.T) {
+	t.Parallel()
+
+	ctx, repo, db, userID := newTestRepository(t)
+	deletedPostID := insertTestPost(t, ctx, db, userID, "deleted")
+	if err := repo.DeleteOwn(ctx, userID, deletedPostID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.ToggleLike(ctx, userID, 999); !errors.Is(err, ErrPostNotFound) {
+		t.Fatalf("missing post error = %v, want %v", err, ErrPostNotFound)
+	}
+	if err := repo.ToggleLike(ctx, userID, deletedPostID); !errors.Is(err, ErrPostNotFound) {
+		t.Fatalf("deleted post error = %v, want %v", err, ErrPostNotFound)
+	}
 }
 
 func TestFormatCreatedAtJST(t *testing.T) {

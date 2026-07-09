@@ -267,6 +267,11 @@ a {
   white-space: pre-wrap;
 }
 
+.post-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .text-button {
   border: 0;
   background: transparent;
@@ -279,6 +284,11 @@ a {
 .text-button:hover {
   color: #111;
   text-decoration: underline;
+}
+
+.text-button-active {
+  color: #111;
+  font-weight: 600;
 }
 
 .empty {

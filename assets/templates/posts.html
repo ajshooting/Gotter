@@ -17,12 +17,21 @@
           <time>{{.CreatedAt}}</time>
         </header>
         <p class="post-body">{{.Body}}</p>
-        {{if eq $.CurrentUser.ID .UserID}}
-          <form method="post" action="/posts/{{.ID}}/delete" data-delete-form>
+        <div class="post-actions">
+          <form method="post" action="/posts/{{.ID}}/like">
             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <button class="text-button" type="submit">Delete</button>
+            <input type="hidden" name="return_to" value="{{$.ReturnTo}}">
+            <button class="text-button {{if .LikedByViewer}}text-button-active{{end}}" type="submit">
+              {{if .LikedByViewer}}Liked{{else}}Like{{end}} {{.LikeCount}}
+            </button>
           </form>
-        {{end}}
+          {{if eq $.CurrentUser.ID .UserID}}
+            <form method="post" action="/posts/{{.ID}}/delete" data-delete-form>
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button class="text-button" type="submit">Delete</button>
+            </form>
+          {{end}}
+        </div>
       </article>
     {{end}}
   {{else}}

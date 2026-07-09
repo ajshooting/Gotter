@@ -21,8 +21,8 @@
           <form method="post" action="/posts/{{.ID}}/like">
             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
             <input type="hidden" name="return_to" value="{{$.ReturnTo}}">
-            <button class="text-button {{if .LikedByViewer}}text-button-active{{end}}" type="submit">
-              {{if .LikedByViewer}}Liked{{else}}Like{{end}} {{.LikeCount}}
+            <button class="text-button {{if .LikedByViewer}}text-button-active{{end}}" type="submit" aria-label="{{if .LikedByViewer}}Unlike{{else}}Like{{end}} this post">
+              <span aria-hidden="true">♡ {{.LikeCount}}</span>
             </button>
           </form>
           {{if eq $.CurrentUser.ID .UserID}}

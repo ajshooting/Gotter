@@ -66,7 +66,13 @@ a {
   color: var(--muted);
   font-size: 14px;
   text-overflow: ellipsis;
+  text-decoration: none;
   white-space: nowrap;
+}
+
+.account-name:hover {
+  color: #111;
+  text-decoration: underline;
 }
 
 .avatar {
@@ -234,7 +240,21 @@ a {
   white-space: nowrap;
 }
 
+.author-text a {
+  overflow: hidden;
+  color: var(--muted);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.author-text a:hover {
+  color: #111;
+  text-decoration: underline;
+}
+
 .author-text span,
+.author-text a,
 .post-header time,
 .empty {
   color: var(--muted);
@@ -275,6 +295,41 @@ a {
 
 .pagination .button:first-child:not(:last-child) {
   margin-right: auto;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.avatar-profile {
+  width: 56px;
+  height: 56px;
+}
+
+.profile-text {
+  min-width: 0;
+}
+
+.profile-text h1,
+.profile-text p {
+  margin: 0;
+}
+
+.profile-text h1 {
+  overflow: hidden;
+  font-size: 22px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-text p {
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .sr-only {

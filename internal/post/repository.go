@@ -75,6 +75,14 @@ WHERE id = ? AND user_id = ? AND deleted_at IS NULL
 }
 
 func (r *Repository) List(ctx context.Context, limit int, beforeID int64) (Page, error) {
+	return r.list(ctx, limit, beforeID, 0)
+}
+
+func (r *Repository) ListByUser(ctx context.Context, userID int64, limit int, beforeID int64) (Page, error) {
+	return r.list(ctx, limit, beforeID, userID)
+}
+
+func (r *Repository) list(ctx context.Context, limit int, beforeID int64, userID int64) (Page, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -93,6 +101,10 @@ LEFT JOIN auth_identities ai ON ai.user_id = u.id AND ai.provider = 'esa'
 WHERE p.deleted_at IS NULL
 `
 	args := []any{}
+	if userID > 0 {
+		query += "AND p.user_id = ?\n"
+		args = append(args, userID)
+	}
 	if beforeID > 0 {
 		query += "AND p.id < ?\n"
 		args = append(args, beforeID)

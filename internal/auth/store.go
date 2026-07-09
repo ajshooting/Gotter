@@ -15,6 +15,7 @@ type User struct {
 	ID          int64
 	DisplayName string
 	AvatarURL   string
+	ScreenName  string
 }
 
 func NewStore(db *sql.DB) *Store {
@@ -24,10 +25,25 @@ func NewStore(db *sql.DB) *Store {
 func (s *Store) GetUser(ctx context.Context, id int64) (User, error) {
 	var user User
 	err := s.db.QueryRowContext(ctx, `
-SELECT id, display_name, avatar_url
-FROM users
-WHERE id = ?
-`, id).Scan(&user.ID, &user.DisplayName, &user.AvatarURL)
+SELECT u.id, u.display_name, u.avatar_url, COALESCE(ai.screen_name, '')
+FROM users u
+LEFT JOIN auth_identities ai ON ai.user_id = u.id AND ai.provider = ?
+WHERE u.id = ?
+`, esaProviderName, id).Scan(&user.ID, &user.DisplayName, &user.AvatarURL, &user.ScreenName)
+	if err != nil {
+		return User{}, err
+	}
+	return user, nil
+}
+
+func (s *Store) GetUserByScreenName(ctx context.Context, screenName string) (User, error) {
+	var user User
+	err := s.db.QueryRowContext(ctx, `
+SELECT u.id, u.display_name, u.avatar_url, ai.screen_name
+FROM auth_identities ai
+JOIN users u ON u.id = ai.user_id
+WHERE ai.provider = ? AND ai.screen_name = ?
+`, esaProviderName, screenName).Scan(&user.ID, &user.DisplayName, &user.AvatarURL, &user.ScreenName)
 	if err != nil {
 		return User{}, err
 	}
@@ -154,10 +170,11 @@ INSERT INTO auth_identities (
 func getUserTx(ctx context.Context, tx *sql.Tx, id int64) (User, error) {
 	var user User
 	err := tx.QueryRowContext(ctx, `
-SELECT id, display_name, avatar_url
-FROM users
-WHERE id = ?
-`, id).Scan(&user.ID, &user.DisplayName, &user.AvatarURL)
+SELECT u.id, u.display_name, u.avatar_url, COALESCE(ai.screen_name, '')
+FROM users u
+LEFT JOIN auth_identities ai ON ai.user_id = u.id AND ai.provider = ?
+WHERE u.id = ?
+`, esaProviderName, id).Scan(&user.ID, &user.DisplayName, &user.AvatarURL, &user.ScreenName)
 	if err != nil {
 		return User{}, err
 	}

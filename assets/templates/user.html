@@ -1,0 +1,17 @@
+{{define "title"}}@{{.ProfileUser.ScreenName}} - {{.AppName}}{{end}}
+
+{{define "content"}}
+<section class="profile">
+  {{if .ProfileUser.AvatarURL}}
+    <img class="avatar avatar-profile" src="{{.ProfileUser.AvatarURL}}" alt="">
+  {{else}}
+    <span class="avatar avatar-profile avatar-fallback" aria-hidden="true"></span>
+  {{end}}
+  <div class="profile-text">
+    <h1>{{.ProfileUser.DisplayName}}</h1>
+    <p>@{{.ProfileUser.ScreenName}}</p>
+  </div>
+</section>
+
+{{template "postList" .}}
+{{end}}

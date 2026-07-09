@@ -142,6 +142,23 @@ func TestRepositoryListExcludesDeletedPostsFromAnyUser(t *testing.T) {
 	}
 }
 
+func TestRepositoryListByUserOnlyReturnsThatUsersPosts(t *testing.T) {
+	t.Parallel()
+
+	ctx, repo, db, userID := newTestRepository(t)
+	otherUserID := insertTestUser(t, ctx, db, "Other", "other", "esa-2")
+
+	insertTestPost(t, ctx, db, userID, "own first")
+	insertTestPost(t, ctx, db, otherUserID, "other")
+	insertTestPost(t, ctx, db, userID, "own second")
+
+	page, err := repo.ListByUser(ctx, userID, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertPage(t, page, []string{"own second", "own first"}, false)
+}
+
 func TestFormatCreatedAtJST(t *testing.T) {
 	t.Parallel()
 

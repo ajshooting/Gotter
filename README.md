@@ -10,6 +10,7 @@ It keeps the first version intentionally simple: esa OAuth login, text-only post
 - Team-based access control
 - Text posts up to 200 characters
 - Timeline view
+- User profile pages
 - Delete your own posts
 
 ## Stack

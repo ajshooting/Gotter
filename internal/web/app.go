@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/alexedwards/scs/v2"
@@ -41,18 +42,22 @@ type App struct {
 }
 
 type viewData struct {
-	AppName       string
-	CurrentUser   *auth.User
-	AllowedTeam   string
-	CSRFToken     string
-	FlashError    string
-	ErrorTitle    string
-	ErrorMessage  string
-	MaxBodyLength int
-	Posts         []post.Post
-	HasNextPosts  bool
-	NextBeforeID  int64
-	HasLatestLink bool
+	AppName         string
+	CurrentUser     *auth.User
+	AllowedTeam     string
+	CSRFToken       string
+	FlashError      string
+	ErrorTitle      string
+	ErrorMessage    string
+	MaxBodyLength   int
+	ProfileUser     *auth.User
+	CurrentUserPath string
+	PagePath        string
+	EmptyMessage    string
+	Posts           []post.Post
+	HasNextPosts    bool
+	NextBeforeID    int64
+	HasLatestLink   bool
 }
 
 type currentUserContextKey struct{}
@@ -93,6 +98,7 @@ func (a *App) Routes() http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Use(a.requireAuth)
 		r.Get("/", a.handleTimeline)
+		r.Get("/users/{screen}", a.handleUser)
 		r.Post("/posts", a.handleCreatePost)
 		r.Post("/posts/{id}/delete", a.handleDeletePost)
 		r.Post("/logout", a.handleLogout)
@@ -193,6 +199,52 @@ func (a *App) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		CSRFToken:     csrfToken,
 		FlashError:    a.sessions.PopString(r.Context(), flashErrorKey),
 		MaxBodyLength: post.MaxBodyLength,
+		PagePath:      "/",
+		EmptyMessage:  "No posts yet.",
+		Posts:         page.Posts,
+		HasNextPosts:  page.HasNext,
+		NextBeforeID:  page.NextBeforeID,
+		HasLatestLink: beforeID > 0,
+	})
+}
+
+func (a *App) handleUser(w http.ResponseWriter, r *http.Request) {
+	csrfToken, err := a.csrfToken(r.Context())
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	beforeID, err := parseBeforeID(r)
+	if err != nil {
+		a.renderError(w, r, http.StatusBadRequest, "Invalid page", "The requested profile page could not be found.")
+		return
+	}
+
+	screenName := chi.URLParam(r, "screen")
+	profileUser, err := a.authStore.GetUserByScreenName(r.Context(), screenName)
+	if errors.Is(err, sql.ErrNoRows) {
+		a.renderError(w, r, http.StatusNotFound, "User not found", "The requested user could not be found.")
+		return
+	}
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	page, err := a.posts.ListByUser(r.Context(), profileUser.ID, 50, beforeID)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	a.render(w, r, http.StatusOK, "user.html", viewData{
+		CurrentUser:   currentUser(r),
+		AllowedTeam:   a.cfg.ESAAllowedTeam,
+		CSRFToken:     csrfToken,
+		ProfileUser:   &profileUser,
+		PagePath:      userPath(profileUser.ScreenName),
+		EmptyMessage:  "No posts yet.",
 		Posts:         page.Posts,
 		HasNextPosts:  page.HasNext,
 		NextBeforeID:  page.NextBeforeID,
@@ -322,8 +374,11 @@ func (a *App) validCSRF(w http.ResponseWriter, r *http.Request) bool {
 
 func (a *App) render(w http.ResponseWriter, r *http.Request, status int, page string, data viewData) {
 	data.AppName = a.cfg.AppName
+	if data.CurrentUser != nil && data.CurrentUser.ScreenName != "" {
+		data.CurrentUserPath = userPath(data.CurrentUser.ScreenName)
+	}
 
-	tmpl, err := template.ParseFS(a.templates, "layout.html", page)
+	tmpl, err := template.ParseFS(a.templates, "layout.html", "posts.html", page)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -338,6 +393,10 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, status int, page st
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = buf.WriteTo(w)
+}
+
+func userPath(screenName string) string {
+	return "/users/" + url.PathEscape(screenName)
 }
 
 func (a *App) renderError(w http.ResponseWriter, r *http.Request, status int, title, message string) {

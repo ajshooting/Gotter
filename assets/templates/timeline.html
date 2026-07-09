@@ -16,44 +16,5 @@
   {{end}}
 </section>
 
-<section class="timeline" aria-label="Timeline">
-  {{if .Posts}}
-    {{range .Posts}}
-      <article class="post">
-        <header class="post-header">
-          <div class="author">
-            {{if .AuthorAvatar}}
-              <img class="avatar" src="{{.AuthorAvatar}}" alt="">
-            {{else}}
-              <span class="avatar avatar-fallback" aria-hidden="true"></span>
-            {{end}}
-            <div class="author-text">
-              {{if .AuthorScreen}}<span>@{{.AuthorScreen}}</span>{{end}}
-            </div>
-          </div>
-          <time>{{.CreatedAt}}</time>
-        </header>
-        <p class="post-body">{{.Body}}</p>
-        {{if eq $.CurrentUser.ID .UserID}}
-          <form method="post" action="/posts/{{.ID}}/delete" data-delete-form>
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <button class="text-button" type="submit">Delete</button>
-          </form>
-        {{end}}
-      </article>
-    {{end}}
-  {{else}}
-    <p class="empty">No posts yet.</p>
-  {{end}}
-  {{if or .HasLatestLink .HasNextPosts}}
-    <nav class="pagination" aria-label="Timeline pages">
-      {{if .HasLatestLink}}
-        <a class="button button-ghost" href="/">Latest</a>
-      {{end}}
-      {{if .HasNextPosts}}
-        <a class="button button-ghost" href="/?before={{.NextBeforeID}}">Next</a>
-      {{end}}
-    </nav>
-  {{end}}
-</section>
+{{template "postList" .}}
 {{end}}

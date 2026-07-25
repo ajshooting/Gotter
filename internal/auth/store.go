@@ -12,10 +12,9 @@ type Store struct {
 }
 
 type User struct {
-	ID          int64
-	DisplayName string
-	AvatarURL   string
-	ScreenName  string
+	ID         int64
+	AvatarURL  string
+	ScreenName string
 }
 
 func NewStore(db *sql.DB) *Store {
@@ -25,11 +24,11 @@ func NewStore(db *sql.DB) *Store {
 func (s *Store) GetUser(ctx context.Context, id int64) (User, error) {
 	var user User
 	err := s.db.QueryRowContext(ctx, `
-SELECT u.id, u.display_name, u.avatar_url, COALESCE(ai.screen_name, '')
+SELECT u.id, u.avatar_url, COALESCE(ai.screen_name, '')
 FROM users u
 LEFT JOIN auth_identities ai ON ai.user_id = u.id AND ai.provider = ?
 WHERE u.id = ?
-`, esaProviderName, id).Scan(&user.ID, &user.DisplayName, &user.AvatarURL, &user.ScreenName)
+`, esaProviderName, id).Scan(&user.ID, &user.AvatarURL, &user.ScreenName)
 	if err != nil {
 		return User{}, err
 	}
@@ -39,11 +38,11 @@ WHERE u.id = ?
 func (s *Store) GetUserByScreenName(ctx context.Context, screenName string) (User, error) {
 	var user User
 	err := s.db.QueryRowContext(ctx, `
-SELECT u.id, u.display_name, u.avatar_url, ai.screen_name
+SELECT u.id, u.avatar_url, ai.screen_name
 FROM auth_identities ai
 JOIN users u ON u.id = ai.user_id
 WHERE ai.provider = ? AND ai.screen_name = ?
-`, esaProviderName, screenName).Scan(&user.ID, &user.DisplayName, &user.AvatarURL, &user.ScreenName)
+`, esaProviderName, screenName).Scan(&user.ID, &user.AvatarURL, &user.ScreenName)
 	if err != nil {
 		return User{}, err
 	}
@@ -105,20 +104,19 @@ WHERE provider = ? AND provider_user_id = ?
 func updateExistingProfile(ctx context.Context, tx *sql.Tx, userID int64, profile Profile) error {
 	if _, err := tx.ExecContext(ctx, `
 UPDATE users
-SET display_name = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
-`, profile.DisplayName, profile.AvatarURL, userID); err != nil {
+`, profile.AvatarURL, userID); err != nil {
 		return err
 	}
 
 	if _, err := tx.ExecContext(ctx, `
 UPDATE auth_identities
-SET screen_name = ?, email = ?, display_name = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+SET screen_name = ?, email = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
 WHERE provider = ? AND provider_user_id = ?
 `,
 		profile.ScreenName,
 		profile.Email,
-		profile.DisplayName,
 		profile.AvatarURL,
 		profile.Provider,
 		profile.ProviderUserID,
@@ -131,9 +129,9 @@ WHERE provider = ? AND provider_user_id = ?
 
 func insertProfile(ctx context.Context, tx *sql.Tx, profile Profile) (int64, error) {
 	result, err := tx.ExecContext(ctx, `
-INSERT INTO users (display_name, avatar_url)
-VALUES (?, ?)
-`, profile.DisplayName, profile.AvatarURL)
+INSERT INTO users (avatar_url)
+VALUES (?)
+`, profile.AvatarURL)
 	if err != nil {
 		return 0, err
 	}
@@ -149,16 +147,14 @@ INSERT INTO auth_identities (
   provider_user_id,
   screen_name,
   email,
-  display_name,
   avatar_url
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?)
 `,
 		userID,
 		profile.Provider,
 		profile.ProviderUserID,
 		profile.ScreenName,
 		profile.Email,
-		profile.DisplayName,
 		profile.AvatarURL,
 	); err != nil {
 		return 0, fmt.Errorf("insert auth identity: %w", err)
@@ -170,11 +166,11 @@ INSERT INTO auth_identities (
 func getUserTx(ctx context.Context, tx *sql.Tx, id int64) (User, error) {
 	var user User
 	err := tx.QueryRowContext(ctx, `
-SELECT u.id, u.display_name, u.avatar_url, COALESCE(ai.screen_name, '')
+SELECT u.id, u.avatar_url, COALESCE(ai.screen_name, '')
 FROM users u
 LEFT JOIN auth_identities ai ON ai.user_id = u.id AND ai.provider = ?
 WHERE u.id = ?
-`, esaProviderName, id).Scan(&user.ID, &user.DisplayName, &user.AvatarURL, &user.ScreenName)
+`, esaProviderName, id).Scan(&user.ID, &user.AvatarURL, &user.ScreenName)
 	if err != nil {
 		return User{}, err
 	}

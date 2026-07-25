@@ -17,14 +17,10 @@ type Profile struct {
 	ProviderUserID string
 	ScreenName     string
 	Email          string
-	DisplayName    string
 	AvatarURL      string
 }
 
 func (p Profile) normalized() Profile {
-	if p.DisplayName == "" {
-		p.DisplayName = p.ScreenName
-	}
 	if p.ProviderUserID == "" {
 		p.ProviderUserID = p.ScreenName
 	}

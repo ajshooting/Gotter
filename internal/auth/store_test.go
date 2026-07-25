@@ -17,7 +17,6 @@ func TestStoreGetsUserWithScreenName(t *testing.T) {
 		Provider:       esaProviderName,
 		ProviderUserID: "esa-1",
 		ScreenName:     "tester",
-		DisplayName:    "Tester",
 		AvatarURL:      "https://example.com/avatar.png",
 	})
 	if err != nil {
@@ -39,8 +38,8 @@ func TestStoreGetsUserWithScreenName(t *testing.T) {
 	if byScreenName.ID != user.ID {
 		t.Fatalf("GetUserByScreenName ID = %d, want %d", byScreenName.ID, user.ID)
 	}
-	if byScreenName.DisplayName != "Tester" {
-		t.Fatalf("GetUserByScreenName DisplayName = %q, want Tester", byScreenName.DisplayName)
+	if byScreenName.AvatarURL != "https://example.com/avatar.png" {
+		t.Fatalf("GetUserByScreenName AvatarURL = %q, want profile avatar", byScreenName.AvatarURL)
 	}
 }
 

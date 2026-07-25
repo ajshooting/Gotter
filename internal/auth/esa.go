@@ -83,7 +83,6 @@ func (p *ESAProvider) FetchProfile(ctx context.Context, code string) (Profile, e
 		ProviderUserID: providerUserID,
 		ScreenName:     member.ScreenName,
 		Email:          member.Email,
-		DisplayName:    member.Name,
 		AvatarURL:      member.Icon,
 	}.normalized(), nil
 }
@@ -182,7 +181,6 @@ type esaTeam struct {
 }
 
 type esaMember struct {
-	Name       string `json:"name"`
 	ScreenName string `json:"screen_name"`
 	Icon       string `json:"icon"`
 	Email      string `json:"email"`

@@ -17,9 +17,9 @@
           <img class="avatar avatar-small" src="{{.CurrentUser.AvatarURL}}" alt="">
         {{end}}
         {{if .CurrentUserPath}}
-          <a class="account-name" href="{{.CurrentUserPath}}">{{.CurrentUser.DisplayName}}</a>
+          <a class="account-name" href="{{.CurrentUserPath}}">@{{.CurrentUser.ScreenName}}</a>
         {{else}}
-          <span class="account-name">{{.CurrentUser.DisplayName}}</span>
+          <span class="account-name">@{{.CurrentUser.ScreenName}}</span>
         {{end}}
         <form method="post" action="/logout">
           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">

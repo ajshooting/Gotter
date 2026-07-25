@@ -113,7 +113,7 @@ func TestRepositoryListExcludesDeletedPostsFromAnyUser(t *testing.T) {
 	t.Parallel()
 
 	ctx, repo, db, userID := newTestRepository(t)
-	otherUserID := insertTestUser(t, ctx, db, "Other", "other", "esa-2")
+	otherUserID := insertTestUser(t, ctx, db, "other", "esa-2")
 
 	visibleOwnID := insertTestPost(t, ctx, db, userID, "visible own")
 	deletedOwnID := insertTestPost(t, ctx, db, userID, "deleted own")
@@ -146,7 +146,7 @@ func TestRepositoryListByUserOnlyReturnsThatUsersPosts(t *testing.T) {
 	t.Parallel()
 
 	ctx, repo, db, userID := newTestRepository(t)
-	otherUserID := insertTestUser(t, ctx, db, "Other", "other", "esa-2")
+	otherUserID := insertTestUser(t, ctx, db, "other", "esa-2")
 
 	insertTestPost(t, ctx, db, userID, "own first")
 	insertTestPost(t, ctx, db, otherUserID, "other")
@@ -163,7 +163,7 @@ func TestRepositoryToggleLikeAddsAndRemovesLike(t *testing.T) {
 	t.Parallel()
 
 	ctx, repo, db, userID := newTestRepository(t)
-	otherUserID := insertTestUser(t, ctx, db, "Other", "other", "esa-2")
+	otherUserID := insertTestUser(t, ctx, db, "other", "esa-2")
 	postID := insertTestPost(t, ctx, db, userID, "liked post")
 
 	if err := repo.ToggleLike(ctx, userID, postID); err != nil {
@@ -250,15 +250,15 @@ func newTestRepository(t *testing.T) (context.Context, *Repository, *sql.DB, int
 		t.Fatal(err)
 	}
 
-	userID := insertTestUser(t, ctx, db, "Tester", "tester", "esa-1")
+	userID := insertTestUser(t, ctx, db, "tester", "esa-1")
 
 	return ctx, NewRepository(db), db, userID
 }
 
-func insertTestUser(t *testing.T, ctx context.Context, db *sql.DB, displayName, screenName, providerUserID string) int64 {
+func insertTestUser(t *testing.T, ctx context.Context, db *sql.DB, screenName, providerUserID string) int64 {
 	t.Helper()
 
-	result, err := db.ExecContext(ctx, "INSERT INTO users (display_name, avatar_url) VALUES (?, ?)", displayName, "")
+	result, err := db.ExecContext(ctx, "INSERT INTO users (avatar_url) VALUES ('')")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,10 +273,9 @@ INSERT INTO auth_identities (
   provider_user_id,
   screen_name,
   email,
-  display_name,
   avatar_url
-) VALUES (?, 'esa', ?, ?, '', ?, '')
-`, userID, providerUserID, screenName, displayName); err != nil {
+) VALUES (?, 'esa', ?, ?, '', '')
+`, userID, providerUserID, screenName); err != nil {
 		t.Fatal(err)
 	}
 

@@ -16,7 +16,6 @@ type Profile struct {
 	Provider       string
 	ProviderUserID string
 	ScreenName     string
-	Email          string
 	AvatarURL      string
 }
 

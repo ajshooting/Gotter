@@ -44,7 +44,12 @@ func run() error {
 		return err
 	}
 
-	sessionManager := session.NewManager(db, cfg.CookieSecure)
+	sessionManager := session.NewManager(
+		db,
+		cfg.CookieSecure,
+		cfg.SessionLifetime,
+		cfg.SessionIdleTimeout,
+	)
 	authStore := auth.NewStore(db)
 	postRepo := post.NewRepository(db)
 	esaProvider := auth.NewESAProvider(
@@ -68,6 +73,10 @@ func run() error {
 		Addr:              ":" + cfg.Port,
 		Handler:           app.Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	serverErrors := make(chan error, 1)

@@ -8,21 +8,24 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
-	AppName         string
-	AppBaseURL      string
-	Port            string
-	DatabasePath    string
-	ESAClientID     string
-	ESAClientSecret string
-	ESAAllowedTeam  string
-	CookieSecure    bool
+	AppName            string
+	AppBaseURL         string
+	Port               string
+	DatabasePath       string
+	ESAClientID        string
+	ESAClientSecret    string
+	ESAAllowedTeam     string
+	CookieSecure       bool
+	SessionLifetime    time.Duration
+	SessionIdleTimeout time.Duration
 }
 
 func Load() (Config, error) {
-	if err := loadDotEnv(".env"); err != nil {
+	if err := loadDotEnv(); err != nil {
 		return Config{}, err
 	}
 
@@ -42,6 +45,18 @@ func Load() (Config, error) {
 	}
 	cfg.CookieSecure = secure
 
+	sessionLifetime, err := time.ParseDuration(getenv("SESSION_LIFETIME", "24h"))
+	if err != nil {
+		return Config{}, fmt.Errorf("SESSION_LIFETIME: %w", err)
+	}
+	cfg.SessionLifetime = sessionLifetime
+
+	sessionIdleTime, err := time.ParseDuration(getenv("SESSION_IDLE_TIMEOUT", "8h"))
+	if err != nil {
+		return Config{}, fmt.Errorf("SESSION_IDLE_TIMEOUT: %w", err)
+	}
+	cfg.SessionIdleTimeout = sessionIdleTime
+
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -56,11 +71,21 @@ func (c Config) Validate() error {
 		return errors.New("APP_BASE_URL is required")
 	}
 	u, err := url.Parse(c.AppBaseURL)
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("APP_BASE_URL must be an absolute URL: %q", c.AppBaseURL)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("APP_BASE_URL must be an absolute http or https URL: %q", c.AppBaseURL)
 	}
-	if c.Port == "" {
-		return errors.New("PORT is required")
+	if u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
+		return fmt.Errorf("APP_BASE_URL must contain only an origin without credentials, path, query, or fragment: %q", c.AppBaseURL)
+	}
+	if u.Scheme == "https" && !c.CookieSecure {
+		return errors.New("COOKIE_SECURE must be true when APP_BASE_URL uses https")
+	}
+	if u.Scheme == "http" && c.CookieSecure {
+		return errors.New("COOKIE_SECURE must be false when APP_BASE_URL uses http")
+	}
+	port, err := strconv.Atoi(c.Port)
+	if err != nil || port < 1 || port > 65535 {
+		return fmt.Errorf("PORT must be an integer from 1 to 65535: %q", c.Port)
 	}
 	if c.DatabasePath == "" {
 		return errors.New("DATABASE_PATH is required")
@@ -73,6 +98,15 @@ func (c Config) Validate() error {
 	}
 	if c.ESAAllowedTeam == "" {
 		return errors.New("ESA_ALLOWED_TEAM is required")
+	}
+	if c.SessionLifetime <= 0 {
+		return errors.New("SESSION_LIFETIME must be greater than zero")
+	}
+	if c.SessionIdleTimeout < 0 {
+		return errors.New("SESSION_IDLE_TIMEOUT must not be negative")
+	}
+	if c.SessionIdleTimeout > c.SessionLifetime {
+		return errors.New("SESSION_IDLE_TIMEOUT must not exceed SESSION_LIFETIME")
 	}
 	return nil
 }
@@ -100,8 +134,8 @@ func parseBool(value string) (bool, error) {
 	}
 }
 
-func loadDotEnv(path string) error {
-	file, err := os.Open(path)
+func loadDotEnv() error {
+	file, err := os.Open(".env")
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}

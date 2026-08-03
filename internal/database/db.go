@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 
 func Open(ctx context.Context, path string) (*sql.DB, error) {
 	if dir := filepath.Dir(path); dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return nil, fmt.Errorf("create database directory: %w", err)
 		}
 	}
@@ -26,6 +27,10 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	db.SetMaxIdleConns(1)
 
 	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := secureDatabaseFiles(path); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -43,4 +48,16 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func secureDatabaseFiles(path string) error {
+	for _, candidate := range []string{path, path + "-wal", path + "-shm"} {
+		if err := os.Chmod(candidate, 0o600); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			return fmt.Errorf("secure database file %s: %w", candidate, err)
+		}
+	}
+	return nil
 }

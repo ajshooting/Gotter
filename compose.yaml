@@ -5,9 +5,16 @@ services:
       - path: .env
         required: false
     ports:
-      - "${HOST_PORT:-8080}:${PORT:-8080}"
+      - "${BIND_HOST:-127.0.0.1}:${HOST_PORT:-8080}:${PORT:-8080}"
     volumes:
       - gotter-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
 volumes:

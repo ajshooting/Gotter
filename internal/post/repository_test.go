@@ -272,9 +272,8 @@ INSERT INTO auth_identities (
   provider,
   provider_user_id,
   screen_name,
-  email,
   avatar_url
-) VALUES (?, 'esa', ?, ?, '', '')
+) VALUES (?, 'esa', ?, ?, '')
 `, userID, providerUserID, screenName); err != nil {
 		t.Fatal(err)
 	}

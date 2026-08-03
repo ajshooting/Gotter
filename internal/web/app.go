@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
@@ -29,6 +30,7 @@ const (
 	oauthStateKey    = "oauth_state"
 	csrfTokenKey     = "csrf_token"
 	flashErrorKey    = "flash_error"
+	maxFormBodyBytes = 64 << 10
 )
 
 type App struct {
@@ -86,7 +88,7 @@ func New(
 func (a *App) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	r.Use(a.securityHeaders)
 	r.Use(middleware.Recoverer)
 	r.Use(a.sessions.LoadAndSave)
 
@@ -295,7 +297,8 @@ func (a *App) handleToggleLike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, safeReturnPath(r.PostForm.Get("return_to")), http.StatusSeeOther)
+	// Gosec cannot follow safeReturnPath's URL parsing; its hostile-input cases are covered by TestSafeReturnPath.
+	http.Redirect(w, r, safeReturnPath(r.PostForm.Get("return_to")), http.StatusSeeOther) // #nosec G710
 }
 
 func (a *App) handleDeletePost(w http.ResponseWriter, r *http.Request) {
@@ -385,7 +388,13 @@ func (a *App) csrfToken(ctx context.Context) (string, error) {
 }
 
 func (a *App) validCSRF(w http.ResponseWriter, r *http.Request) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormBodyBytes)
 	if err := r.ParseForm(); err != nil {
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			a.renderError(w, r, http.StatusRequestEntityTooLarge, "Form too large", "The submitted form is too large.")
+			return false
+		}
 		a.renderError(w, r, http.StatusBadRequest, "Invalid form", "The submitted form could not be read.")
 		return false
 	}
@@ -435,10 +444,32 @@ func currentPath(r *http.Request) string {
 }
 
 func safeReturnPath(path string) string {
-	if path == "" || path[0] != '/' || (len(path) > 1 && path[1] == '/') {
+	u, err := url.Parse(path)
+	if err != nil || u.IsAbs() || u.Host != "" || !strings.HasPrefix(u.Path, "/") {
 		return "/"
 	}
-	return path
+	if strings.HasPrefix(u.Path, "//") || strings.Contains(u.Path, "\\") {
+		return "/"
+	}
+	return u.RequestURI()
+}
+
+func (a *App) securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := w.Header()
+		header.Set("Content-Security-Policy", "default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' https: data:; object-src 'none'; script-src 'self'; style-src 'self'")
+		header.Set("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+		header.Set("Referrer-Policy", "no-referrer")
+		header.Set("X-Content-Type-Options", "nosniff")
+		header.Set("X-Frame-Options", "DENY")
+		if a.cfg.CookieSecure {
+			header.Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		if !strings.HasPrefix(r.URL.Path, "/static/") {
+			header.Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *App) renderError(w http.ResponseWriter, r *http.Request, status int, title, message string) {

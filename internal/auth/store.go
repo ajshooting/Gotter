@@ -112,11 +112,10 @@ WHERE id = ?
 
 	if _, err := tx.ExecContext(ctx, `
 UPDATE auth_identities
-SET screen_name = ?, email = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+SET screen_name = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
 WHERE provider = ? AND provider_user_id = ?
 `,
 		profile.ScreenName,
-		profile.Email,
 		profile.AvatarURL,
 		profile.Provider,
 		profile.ProviderUserID,
@@ -146,15 +145,13 @@ INSERT INTO auth_identities (
   provider,
   provider_user_id,
   screen_name,
-  email,
   avatar_url
-) VALUES (?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?)
 `,
 		userID,
 		profile.Provider,
 		profile.ProviderUserID,
 		profile.ScreenName,
-		profile.Email,
 		profile.AvatarURL,
 	); err != nil {
 		return 0, fmt.Errorf("insert auth identity: %w", err)

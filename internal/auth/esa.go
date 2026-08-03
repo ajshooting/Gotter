@@ -28,7 +28,7 @@ func NewESAProvider(clientID, clientSecret, redirectURL, allowedTeam string) *ES
 			ClientSecret: clientSecret,
 			RedirectURL:  redirectURL,
 			Scopes:       []string{"read"},
-			Endpoint: oauth2.Endpoint{
+			Endpoint: oauth2.Endpoint{ // #nosec G101 -- these are public esa OAuth endpoints, not credentials.
 				AuthURL:   "https://api.esa.io/oauth/authorize",
 				TokenURL:  "https://api.esa.io/oauth/token",
 				AuthStyle: oauth2.AuthStyleInParams,
@@ -82,7 +82,6 @@ func (p *ESAProvider) FetchProfile(ctx context.Context, code string) (Profile, e
 		Provider:       esaProviderName,
 		ProviderUserID: providerUserID,
 		ScreenName:     member.ScreenName,
-		Email:          member.Email,
 		AvatarURL:      member.Icon,
 	}.normalized(), nil
 }
@@ -183,5 +182,4 @@ type esaTeam struct {
 type esaMember struct {
 	ScreenName string `json:"screen_name"`
 	Icon       string `json:"icon"`
-	Email      string `json:"email"`
 }

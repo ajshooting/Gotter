@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM golang:1.26-bookworm AS build
+FROM golang:1.26.5-bookworm AS build
 
 WORKDIR /src
 
@@ -22,14 +22,15 @@ FROM debian:bookworm-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
-  && useradd --system --uid 10001 --gid 0 gotter
+  && groupadd --system --gid 10001 gotter \
+  && useradd --system --uid 10001 --gid gotter --home-dir /nonexistent --shell /usr/sbin/nologin gotter
 
 WORKDIR /app
 
 COPY --from=build /out/gotter /app/gotter
 
-RUN mkdir -p /app/data \
-  && chown -R gotter:0 /app
+RUN install -d -o gotter -g gotter -m 0700 /app/data \
+  && chown gotter:gotter /app/gotter
 
 USER gotter
 

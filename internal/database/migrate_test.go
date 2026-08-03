@@ -11,7 +11,7 @@ import (
 	"gotter/assets"
 )
 
-func TestMigrateRemovesStoredDisplayNames(t *testing.T) {
+func TestMigrateRemovesStoredIdentityDetails(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -56,7 +56,7 @@ INSERT INTO auth_identities (
   email,
   display_name,
   avatar_url
-) VALUES (?, 'esa', 'esa-1', 'tester', '', 'Real Name', 'https://example.com/avatar.png')
+) VALUES (?, 'esa', 'esa-1', 'tester', 'tester@example.com', 'Real Name', 'https://example.com/avatar.png')
 `, userID); err != nil {
 		t.Fatal(err)
 	}
@@ -67,6 +67,7 @@ INSERT INTO auth_identities (
 
 	assertColumnAbsent(t, ctx, db, "users", "display_name")
 	assertColumnAbsent(t, ctx, db, "auth_identities", "display_name")
+	assertColumnAbsent(t, ctx, db, "auth_identities", "email")
 
 	var screenName string
 	if err := db.QueryRowContext(ctx, `

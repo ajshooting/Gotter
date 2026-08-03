@@ -9,10 +9,12 @@ import (
 	"github.com/alexedwards/scs/v2"
 )
 
-func NewManager(db *sql.DB, secureCookie bool) *scs.SessionManager {
+func NewManager(db *sql.DB, secureCookie bool, lifetime, idleTimeout time.Duration) *scs.SessionManager {
 	manager := scs.New()
 	manager.Store = sqlite3store.New(db)
-	manager.Lifetime = 14 * 24 * time.Hour
+	manager.Lifetime = lifetime
+	manager.IdleTimeout = idleTimeout
+	manager.HashTokenInStore = true
 	manager.Cookie.Name = "gotter_session"
 	manager.Cookie.HttpOnly = true
 	manager.Cookie.SameSite = http.SameSiteLaxMode

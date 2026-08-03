@@ -1,4 +1,5 @@
 .git
+.github
 .env
 .DS_Store
 .cache
